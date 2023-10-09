@@ -22,7 +22,7 @@ Setup other components
 
 ```
 pip install virtualenv
-virtualenv -p python3 venv
+virtualenv -p python3.10 venv
 source venv/bin/activate (For MACOS / Linux) OR venv\Scripts\activate (For Windows)
 pip install -r requirements.txt
 python codes/manage.py runserver
