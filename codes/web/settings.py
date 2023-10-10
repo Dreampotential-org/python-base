@@ -272,11 +272,11 @@ ASGI_APPLICATION = 'web.routing.application'
 #         'PASSWORD': db_password,
 #     }
 # }
-db_user = os.environ.get('db_user', 'postgres')
-db_password = os.environ.get('db_password', '123456')
-db_name = os.environ.get('db_user', 'postgres')
-db_host = os.environ.get('db_host', 'localhost') 
-db_port = os.environ.get('db_port', '5432')
+db_user = os.environ.get('db_user', 'postgresuser')
+db_password = os.environ.get('db_password', 'postgrespassword')
+db_name = os.environ.get('db_user', 'postgresdb')
+db_host = os.environ.get('db_host', 'localhost')
+db_port = os.environ.get('db_port', '5433')
 
 DATABASES = {
     'default': {
