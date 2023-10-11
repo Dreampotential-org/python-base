@@ -47,7 +47,6 @@ def get_client():
     try:
         twilio_client = Client(settings.TWILIO['TWILIO_ACCOUNT_SID'],
                                settings.TWILIO['TWILIO_AUTH_TOKEN'])
-        # twilio_client = Client('AC2d1ed367f376eda8265873443d929b4c','b7c99cd1325c714acddbe4997e80bf87')  # gajanan twilio for testing.
         return twilio_client
     except Exception as e:
         msg = "Missing configuration variable: {}".format(e)
@@ -84,9 +83,10 @@ def getNumber(request):
 def send_sms_api(request):
     to_num = request.POST.get("to_number")
     msg = request.POST.get("msg")
-    data = Sms_details(to_number=to_num,msg_body=msg,created_at =  datetime.datetime.now())
+    data = Sms_details(to_number=to_num,
+                       msg_body=msg, created_at =  datetime.datetime.now())
     data.save()
-    send_sms(to_num,msg)    
+    send_sms(to_num, msg)
     return JsonResponse({'message': 'Success'})
 
 
@@ -134,7 +134,7 @@ def get_all_active_numbers(request):
     return JsonResponse({'active':active_numbers}, safe = False)
 
 
-@csrf_exempt    
+@csrf_exempt
 def filter_list_sms_api(request):
     num = request.POST.get('num')
     #messages = list_sms(request.POST.get('to_number'))
@@ -182,10 +182,8 @@ def voip_callback(request, session_id):
         if choice == '1':
             print("🚀 ~ file: views.py ~ line 398 ~ resp",str(session_id))
             resp.say('Adding destination number to the conference!')
-            resp.redirect('https://api.dreampotential.org/voip/api_voip/add_user/' + str(session_id))
-            # resp.redirect('https://03ec2bac2d29.ngrok.io/voip/api_voip/add_user/' + str(session_id))
-            # print(str(resp))
-            
+            resp.redirect('https://py-api.dreampotential.org/voip/api_voip/add_user/' + str(session_id))
+
             return HttpResponse(resp)
         elif choice == '2':
             resp.say('Thank you for calling, have a nice day!')
@@ -201,9 +199,9 @@ def voip_callback(request, session_id):
         elif choice == '6':
             resp.play("https://nf1f8200-a.akamaihd.net/downloads/ringtones/files/mp3/beautiful-koyal-real-sound-mp3-good-morning-songsindia-net-9993.mp3")
         elif choice == '7':
-            resp.play("https://audio-previews.elements.envatousercontent.com/files/237106115/preview.mp3")  
+            resp.play("https://audio-previews.elements.envatousercontent.com/files/237106115/preview.mp3") 
         elif choice == '8':
-            resp.play("https://assets.mixkit.co/sfx/preview/mixkit-little-birds-singing-in-the-trees-17.mp3")       
+            resp.play("https://assets.mixkit.co/sfx/preview/mixkit-little-birds-singing-in-the-trees-17.mp3")
         elif choice == '9':
             resp.say('You can pause the music for 10 seconds starting now!')
             resp.pause(length=10)
@@ -215,7 +213,7 @@ def voip_callback(request, session_id):
         # Get user input
         gather = Gather(
             num_digits=1,
-            action='https://api.dreampotential.org/voip/api_voip/voip_callback/'
+            action='https://py-api.dreampotential.org/voip/api_voip/voip_callback/'
                     + session_id)
             # action='https://03ec2bac2d29.ngrok.io/voip/api_voip/voip_callback/'
                 # + session_id)
@@ -225,7 +223,7 @@ def voip_callback(request, session_id):
 
     # If the user didn't choose 1 or 2 (or anything), repeat the message
     resp.redirect(
-        'https://api.dreampotential.org/voip/api_voip/voip_callback/' + str(session_id))
+        'https://py-api.dreampotential.org/voip/api_voip/voip_callback/' + str(session_id))
         # 'https://03ec2bac2d29.ngrok.io/voip/api_voip/voip_callback/' + str(session_id))
 
     print(str(resp))
@@ -254,14 +252,13 @@ def add_user_to_conf(request, session_id):
     dial.conference(destination_number)
     resp.append(dial)
     print(
-        'https://api.dreampotential.org/voip/api_voip/leave_conf/' + str(session_id) +"/" + str(destination_number))
+        'https://py-api.dreampotential.org/voip/api_voip/leave_conf/' + str(session_id) +"/" + str(destination_number))
 
     participant = client.conferences(destination_number).participants.create(
         record=True,
         from_=settings.TWILIO['TWILIO_NUMBER'],
         to=destination_number,
-        conference_status_callback='https://api.dreampotential.org/voip/api_voip/leave_conf/' + str(session_id) +"/" + str(destination_number),
-        # conference_status_callback='https://03ec2bac2d29.ngrok.io/voip/api_voip/leave_conf/' + str(session_id) +"/" + str(destination_number),
+        conference_status_callback='https://py-api.dreampotential.org/voip/api_voip/leave_conf/' + str(session_id) +"/" + str(destination_number),
         conference_status_callback_event="leave")
 
     return HttpResponse(str(resp))
@@ -370,11 +367,9 @@ def join_conference(request):
     call = twilio_client.calls.create(record=True,
                                         from_= settings.TWILIO['TWILIO_NUMBER'],
                                         to = your_number,
-                                        url='https://api.dreampotential.org/voip/api_voip/voip_callback/' + str(session_id),
-                                    #   url='https://03ec2bac2d29.ngrok.io/voip/api_voip/voip_callback/' + str(session_id),
+                                        url='https://py-api.dreampotential.org/voip/api_voip/voip_callback/' + str(session_id),
                                         status_callback_event=['completed'],
-                                        status_callback='https://api.dreampotential.org/voip/api_voip/complete_call/' + str(session_id),
-                                    #   status_callback='https://03ec2bac2d29.ngrok.io/voip/api_voip/complete_call/' + str(session_id)
+                                        status_callback='https://py-api.dreampotential.org/voip/api_voip/complete_call/' + str(session_id),
                                     )
 
 
@@ -688,7 +683,7 @@ def handle_incoming_call(request):
     response.append(dial)
     response.say("Hi, I can't come to the phone right now, please leave a message after the beep",voice="alice")
     response.record(
-        recording_status_callback='https://api.dreampotential.org/voip/api_voip/recording_status_callback',
+        recording_status_callback='https://py-api.dreampotential.org/voip/api_voip/recording_status_callback',
         recording_status_callback_event='completed')
     response.hangup()
     return HttpResponse(response)
