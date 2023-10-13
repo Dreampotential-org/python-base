@@ -128,14 +128,10 @@ If you did not make this request then simply ignore this email and no changes wi
 class UserProfile(models.Model):
     image = models.CharField(max_length=500,null = True, blank = True,
                         default='https://cdn.icon-icons.com/icons2/2643/PNG/512/male_boy_person_people_avatar_icon_159358.png')
-    
+
     modified_at = models.DateTimeField(auto_now= True)
-    
     phone_number = models.CharField(max_length=13,null = True, blank = True, default='+910000000000')
-
     about = models.CharField(max_length=1000, blank=True, default='Available') 
-
-    
     user = models.ForeignKey(User, on_delete=models.CASCADE,null=True, blank=True,
                             related_name='user_profile')
 

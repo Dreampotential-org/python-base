@@ -2,7 +2,8 @@ import tensorflow as tf
 import numpy as np
 import cv2
 import os
-from web.settings import BASE_DIR
+#from web.settings import BASE_DIR
+BASE_DIR = "/codes"
 
 os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
 # RetinaFace face detector
@@ -19,7 +20,8 @@ def one_face(frame, bbs, pointss):
     bb = bbs[index]
     points = pointss[:,index]
     return bb, points
-            
+
+
 def draw_landmarks(frame, bb, points):
     # draw rectangle and landmarks on face
     cv2.rectangle(frame,(int(bb[0]),int(bb[1])),(int(bb[2]),int(bb[3])),orange,2)
@@ -28,7 +30,7 @@ def draw_landmarks(frame, bb, points):
     cv2.circle(frame, (int(points[2]), int(points[7])), 2, (255,0,0), 2) # nose
     cv2.circle(frame, (int(points[3]), int(points[8])), 2, (255,0,0), 2) # mouth
     cv2.circle(frame, (int(points[4]), int(points[9])), 2, (255,0,0), 2)
-    
+
     w = int(bb[2])-int(bb[0]) # width
     h = int(bb[3])-int(bb[1]) # height
     w2h_ratio = w/h # ratio

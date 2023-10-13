@@ -59,12 +59,10 @@ def apiOverview(request):
 
 @api_view(['POST'])
 def lesson_create(request):
-    token = AuthToken.objects.get(token_key = request.headers.get('Authorization')[:8])
-    user = User.objects.get(id=token.user_id)
     les_ = Lesson()
     les_.lesson_name = request.data["lesson_name"]
     les_.meta_attributes = request.data["meta_attributes"]
-    les_.user = user
+    les_.user = request.user
     les_.lesson_is_public = request.data["lesson_is_public"]
     les_.save()
     for flashcard in request.data["flashcards"]:
@@ -175,7 +173,7 @@ def lesson_create(request):
             stripe_item.save()
 
             f = FlashCard(
-                lesson=lesson, 
+                lesson=lesson,
                 lesson_type=lesson_type,
                 question=question,
                 options=options,
@@ -205,9 +203,8 @@ def lesson_create(request):
 def lesson_read(request, pk):
     data = {}
     try:
-        # token = AuthToken.objects.get(token_key=request.headers.get('Authorization')[:8])
         user = request.user
-        les_= Lesson.objects.get(user=user,id=pk)
+        les_= Lesson.objects.get(user=user, id=pk)
         if not les_:
             return JsonResponse({'message': 'Unauthorized'})
         less_serialized = LessonSerializer(les_)
@@ -215,7 +212,8 @@ def lesson_read(request, pk):
         for card in data["flashcards"]:
             if (card['lesson_type'] == "braintree_Config"):
                 if card['braintree_config']:
-                    obj_braintree_config = BrainTreeConfig.objects.get(id=card['braintree_config'])
+                    obj_braintree_config = BrainTreeConfig.objects.get(
+                        id=card['braintree_config'])
                     card['braintree_merchant_ID'] = obj_braintree_config.braintree_merchant_ID
                     card['braintree_public_key'] = obj_braintree_config.braintree_public_key
                     card['braintree_private_key'] = obj_braintree_config.braintree_private_key
@@ -275,7 +273,8 @@ def lessons_in_class(request):
         lessonsResponse = []
         # lessons = LessonSerializer(Lesson.objects.filter(_class=class_id), many=True)
         lessons = Lesson.objects.filter(_class=class_id)
-        FCTYPES = ['datepicker','user_gps','name_type','signature','title_textarea','title_input','user_image_upload','question_choices', 'user_video_upload','question_checkboxes']
+        FCTYPES = ['datepicker', 'user_gps', 'name_type', 'signature', 'title_textarea',
+                   'title_input','user_image_upload','question_choices', 'user_video_upload','question_checkboxes']
         for lessn in lessons:
             singleLesson = {}
             singleLesson['name'] = lessn.lesson_name
