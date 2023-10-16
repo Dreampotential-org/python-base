@@ -318,17 +318,16 @@ def lessons_in_class(request):
 @api_view(['GET','POST','PUT','DELETE'])
 @csrf_exempt
 def lesson_all(request):
-    print("🚀 ~ file: views.py ~ line 202 ~ request.headers.get('Authorization')[:8]", request.headers.get('Authorization')[:8])
-    token = AuthToken.objects.get(token_key = request.headers.get('Authorization')[:8])
+    print("HERELERERER %s" % request.user)
     if request.method == 'GET':
-        if 'Authorization' in request.headers:
             # les_= Lesson.objects.filter(user=token.user_id)
             # less_serialized = LessonSerializer(les_,many=True)
-            less_serialized = LessonSerializer(
-                Lesson.objects.filter(user=token.user_id), many=True)
-            return JsonResponse(less_serialized.data, safe=False)
-        else:
+        if not request.user:
             return JsonResponse({"message":"Unauthorized"})
+
+        less_serialized = LessonSerializer(
+            Lesson.objects.filter(user=request.user), many=True)
+        return JsonResponse(less_serialized.data, safe=False)
     if request.method == 'PUT':
         try:
             lesson = Lesson.objects.get(id=request.data.get('lesson_id'))
@@ -341,28 +340,28 @@ def lesson_all(request):
 
     if request.method == 'DELETE':
         try:
-            # lesson = Lesson.objects.get(id=request.data.get('lesson_id'))
+            # XXX NEED to check if person owns lesson in order to delete it.
             lesson = Lesson.objects.get(id=request.GET['lesson_id'])
             lesson.delete()
             return JsonResponse({"success":True},status=status.HTTP_200_OK)
 
         except:
-            return JsonResponse({"success":False},status=status.HTTP_204_NO_CONTENT)
+            return JsonResponse({"success":False},
+                                status=status.HTTP_204_NO_CONTENT)
 
 from termcolor import cprint
 
 @api_view(['POST'])
 def lesson_update(request, pk):
     try:
-        token = AuthToken.objects.get(token_key=request.headers.get('Authorization')[:8])
-        user = User.objects.get(id=token.user_id)
-        lesson = Lesson.objects.get(user=user,id=pk)
+        user = request.user
+        lesson = Lesson.objects.get(user=user, id=pk)
         lesson_name = request.data['lesson_name']
         lesson_is_public = request.data['lesson_is_public']
         meta_attributes = request.data['meta_attributes']
-        Lesson.objects.filter(user=user,id=pk).update(lesson_name=lesson_name)
-        Lesson.objects.filter(user=user,id=pk).update(meta_attributes=meta_attributes)
-        Lesson.objects.filter(user=user,id=pk).update(lesson_is_public=lesson_is_public)
+        Lesson.objects.filter(user=user, id=pk).update(lesson_name=lesson_name)
+        Lesson.objects.filter(user=user, id=pk).update(meta_attributes=meta_attributes)
+        Lesson.objects.filter(user=user, id=pk).update(lesson_is_public=lesson_is_public)
         for fc in FlashCard.objects.filter(lesson=lesson):
             toDelete = True
             for flashcard in request.data["flashcards"]:
@@ -405,26 +404,24 @@ def lesson_update(request, pk):
 
             if "image" in flashcard:
                 image = flashcard["image"]
-            
+
             if "braintree_merchant_ID" in flashcard:
                 braintree_merchant_ID = flashcard["braintree_merchant_ID"]
-            
+
             if "braintree_public_key" in flashcard:
                 braintree_public_key = flashcard["braintree_public_key"]
-            
+
             if "braintree_private_key" in flashcard:
                 braintree_private_key = flashcard["braintree_private_key"]
-            
+
             if "braintree_item_name" in flashcard:
                 braintree_item_name = flashcard["braintree_item_name"]
-            
+
             if "braintree_item_price" in flashcard:
                 braintree_item_price = flashcard["braintree_item_price"]
 
             if 'stripe_product_price' in flashcard:
                 stripe_product_price = flashcard['stripe_product_price']
-
-            
 
             if 'stripe_recurring_price' in flashcard:
                 stripe_recurring_price = flashcard['stripe_recurring_price']
@@ -546,13 +543,11 @@ def lesson_update(request, pk):
     except Exception as e:
         print("🚀 ~ file: views.py ~ line 374 ~ e", e)
         return Response({"msg":"you cannot update this lesson"},status=status.HTTP_401_UNAUTHORIZED)
-        
 
 @api_view(['DELETE'])
-def lesson_delete(request,pk):
+def lesson_delete(request, pk):
     try:
-        token = AuthToken.objects.get(token_key=request.headers.get('Authorization')[:8])
-        user = User.objects.get(id=token.user_id)
+        user = request.user
         lesson = Lesson.objects.filter(user=user,id=pk)
         lesson.delete()
         return Response("deleted")
@@ -1135,9 +1130,7 @@ def get_distance(lat1, lon1, lat2, lon2):
 @api_view(['POST'])
 def member_session_start(request):
     try:
-        token = AuthToken.objects.get(
-            token_key=request.headers.get('Authorization')[:8])
-        user = User.objects.get(id=token.user_id)
+        user = request.user
         session_create = MemberSession.objects.create(user=user)
         member_session_start.mge = MemberGpsEntry.objects.create(
             member_session=session_create,
@@ -1153,9 +1146,7 @@ def member_session_start(request):
 @api_view(['POST'])
 def member_session_stop(request):
     try:
-        token = AuthToken.objects.get(
-            token_key=request.headers.get('Authorization')[:8])
-        user = User.objects.get(id=token.user_id)
+        user = request.user
         session_create = MemberSession.objects.filter(user=user).last()
         session_create.ended_at = datetime.datetime.now()
         session_create.save()
