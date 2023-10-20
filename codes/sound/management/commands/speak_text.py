@@ -11,6 +11,7 @@ import torch
 import random
 import string
 import soundfile as sf
+from pydub import AudioSegment
 
 
 
@@ -73,6 +74,21 @@ class Command(BaseCommand):
             'rms': 5667,  # US male
             'slt': 6799   # US female
         }
+        soundfile = None
         for speaker_name, speaker in speakers.items():
-            output_filename = save_text_to_speech(txt, speaker)
-            print(f"Saved {output_filename}")
+            for word in txt.split(" "):
+                output_filename = save_text_to_speech(word, speaker)
+                print(f"Saved {output_filename}")
+                if not soundfile:
+                    soundfile = AudioSegment(output_filename)
+                else:
+                    soundfile += AudioSegment(output_filename)
+
+        # export sound file
+        soundfile.export("output.mp3", format="mp3")
+
+
+
+
+
+

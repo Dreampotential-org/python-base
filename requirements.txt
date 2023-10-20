@@ -188,3 +188,5 @@ ffmpeg
 transformers
 sentencepiece
 datasets
+soundfile
+pydub
