@@ -274,8 +274,16 @@ ASGI_APPLICATION = 'web.routing.application'
 db_user = os.environ.get('db_user', 'postgresuser')
 db_password = os.environ.get('db_password', 'postgrespassword')
 db_name = os.environ.get('db_user', 'postgresdb')
-db_host = os.environ.get('db_host', 'localhost')
+db_host = os.environ.get('db_host', 'app.realtorstat.com')
 db_port = os.environ.get('db_port', '5433')
+
+db_user = 'postgresuser'
+db_password = 'postgrespassword'
+db_name = 'postgresdb'
+db_host = 'app.realtorstat.com'
+db_port = '5433'
+
+
 
 DATABASES = {
     'default': {

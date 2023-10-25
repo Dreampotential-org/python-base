@@ -1,5 +1,5 @@
 from django.apps import AppConfig
 
 
-class WifiConfig(AppConfig):
-    name = 'wifi'
+class SoundConfig(AppConfig):
+    name = 'sound'

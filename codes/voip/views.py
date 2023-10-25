@@ -438,14 +438,14 @@ def get_lead(request):
     #todo: add filter to Userleads via ('first_name', 'last_name', 'phone', "address") with icontains
     if request.method == 'GET':
         try:
+            all_csv = []
             token = request.user
             user = User.objects.get(id=token.id)
-            # user = User.objects.first()
-            all_csv=[]
-            # qs = Userleads.objects.filter(user=user).values("csv_data")
+            print(user)
             get_lead_serialized = UserLeadsSerializer(
                  Userleads.objects.filter(
-                    user=user.id).values("csv_data"), many=True)
+                 #   user=user
+                ).values("csv_data"), many=True)
             print(get_lead_serialized.data)
             if len(get_lead_serialized.data) > 0 :
                 return JsonResponse(
