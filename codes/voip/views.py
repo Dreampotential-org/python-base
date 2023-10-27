@@ -34,6 +34,8 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
 
 
+SERVER_URL = 'https://py-api.dreampotential.org'
+
 # Generate a session id for conference
 def get_session_id(source_number, destination_number):
     return (
@@ -182,7 +184,7 @@ def voip_callback(request, session_id):
         if choice == '1':
             print("🚀 ~ file: views.py ~ line 398 ~ resp",str(session_id))
             resp.say('Adding destination number to the conference!')
-            resp.redirect('https://py-api.dreampotential.org/voip/api_voip/add_user/' + str(session_id))
+            resp.redirect(SERVER_URL + '/voip/api_voip/add_user/' + str(session_id))
 
             return HttpResponse(resp)
         elif choice == '2':
@@ -213,8 +215,7 @@ def voip_callback(request, session_id):
         # Get user input
         gather = Gather(
             num_digits=1,
-            action='https://py-api.dreampotential.org/voip/api_voip/voip_callback/'
-                    + session_id)
+            action=SERVER_URL + '/voip/api_voip/voip_callback/' + session_id)
             # action='https://03ec2bac2d29.ngrok.io/voip/api_voip/voip_callback/'
                 # + session_id)
         gather.say(
@@ -222,9 +223,7 @@ def voip_callback(request, session_id):
         resp.append(gather)
 
     # If the user didn't choose 1 or 2 (or anything), repeat the message
-    resp.redirect(
-        'https://py-api.dreampotential.org/voip/api_voip/voip_callback/' + str(session_id))
-        # 'https://03ec2bac2d29.ngrok.io/voip/api_voip/voip_callback/' + str(session_id))
+    resp.redirect(SERVER_URL + '/voip/api_voip/voip_callback/' + str(session_id))
 
     print(str(resp))
     return HttpResponse(resp)
@@ -235,6 +234,49 @@ def voip_callback(request, session_id):
 def remove_user_to_conf(request, session_id):
     pass
  
+
+@csrf_exempt
+def add_number_to_conf(request, session_id, destination_number):
+    print("🚀 ~ file: views.py ~ line 399 ~ session_id", session_id)
+    # print(request.POST)
+
+    print("🚀 ~ file: views.py ~ line 162 ~ destination_number", destination_number)
+    print("Attemtping to add phone number to call: " + destination_number)
+
+    client = get_client()
+
+    client.conference("aaron").participants.create(
+         label='customer',
+         early_media=True,
+         beep='onEnter',
+         status_callback='https://myapp.com/events',
+
+         status_callback_event=['ringing'],
+         record=True,
+         from_='+15017122661',
+         to='+15558675310'
+    )
+
+
+
+    resp = VoiceResponse()
+
+    dial = Dial()
+    dial.conference(destination_number)
+    resp.append(dial)
+    print(
+        SERVER_URL + '/voip/api_voip/leave_conf/' + str(session_id) +"/" + str(destination_number))
+
+    participant = client.conferences(destination_number).participants.create(
+        record=True,
+        from_=settings.TWILIO['TWILIO_NUMBER'],
+        to=destination_number,
+        conference_status_callback=SERVER_URL + '/voip/api_voip/leave_conf/' + str(session_id) +"/" + str(destination_number),
+        conference_status_callback_event="leave")
+
+    return HttpResponse(str(resp))
+
+
 
 @csrf_exempt
 def add_user_to_conf(request, session_id):
@@ -252,13 +294,13 @@ def add_user_to_conf(request, session_id):
     dial.conference(destination_number)
     resp.append(dial)
     print(
-        'https://py-api.dreampotential.org/voip/api_voip/leave_conf/' + str(session_id) +"/" + str(destination_number))
+        SERVER_URL + '/voip/api_voip/leave_conf/' + str(session_id) +"/" + str(destination_number))
 
     participant = client.conferences(destination_number).participants.create(
         record=True,
         from_=settings.TWILIO['TWILIO_NUMBER'],
         to=destination_number,
-        conference_status_callback='https://py-api.dreampotential.org/voip/api_voip/leave_conf/' + str(session_id) +"/" + str(destination_number),
+        conference_status_callback=SERVER_URL + '/voip/api_voip/leave_conf/' + str(session_id) +"/" + str(destination_number),
         conference_status_callback_event="leave")
 
     return HttpResponse(str(resp))
@@ -364,15 +406,14 @@ def join_conference(request):
     conference_session.save()
 
 
-    call = twilio_client.calls.create(record=True,
-                                        from_= settings.TWILIO['TWILIO_NUMBER'],
-                                        to = your_number,
-                                        url='https://py-api.dreampotential.org/voip/api_voip/voip_callback/' + str(session_id),
-                                        status_callback_event=['completed'],
-                                        status_callback='https://py-api.dreampotential.org/voip/api_voip/complete_call/' + str(session_id),
-                                    )
-
-
+    call = twilio_client.calls.create(
+        record=True,
+        from_= settings.TWILIO['TWILIO_NUMBER'],
+        to = your_number,
+        url=SERVER_URL + '/voip/api_voip/voip_callback/' + str(session_id),
+        status_callback_event=['completed'],
+        status_callback=SERVER_URL + '/voip/api_voip/complete_call/' + str(session_id),
+    )
     twilio_session.callsid = call.sid
     twilio_session.save()
     # except Exception as e:
@@ -435,7 +476,6 @@ def send_sms_(request):
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def get_lead(request):
-    #todo: add filter to Userleads via ('first_name', 'last_name', 'phone', "address") with icontains
     if request.method == 'GET':
         try:
             all_csv = []
@@ -477,9 +517,16 @@ def get_lead(request):
         ask = request.data.get('ask')
         notes = request.data.get('notes')
         new_url = request.data.get('new_url')
-        lead = Userleads(user=user,first_name=first_name,last_name=last_name, phone=phone,  email=email,
-                                ask=ask, state=state, notes=notes,
-                                url=new_url)
+        lead = Userleads(
+            user=user,
+            first_name=first_name,
+            last_name=last_name,
+            phone=phone,
+            email=email,
+            ask=ask,
+            state=state,
+            notes=notes,
+            url=new_url)
 
         lead.save()
         return JsonResponse({'message': "sucess !"}, status=200)
@@ -521,63 +568,12 @@ def get_lead(request):
             return JsonResponse({'message': 'success'}, status=200)
 
 
-# @api_view(['POST'])
-# def csvUploder(request):
-#     csv_file = request.data['csvFile']
-#     common_header = ['Name', 'Phone', 'Email',
-#                      'State', 'Ask',
-#                      'Notes', 'Url']
-#     for index, row in enumerate(csv_file):
-#         data = row.decode('utf-8')
-#         if data:
-#             line = data.split('","')
-#             if index == 0:
-#                 if common_header != [re.sub(r"\r\n","",column.replace('"',"")) for column in line]:
-#                     return JsonResponse({
-#                         "message": "error csv format"}, safe=False, status=406)
-#                 continue
-            
-#             line = [re.sub(r"\r\n","",column.replace('"',"")) for column in line]
-#             name = line[0]
-#             phone = line[1]
-#             email = line[2]
-#             state = line[3]
-#             ask = line[4]
-#             notes = line[5]
-#             url = line[6]
-#             lead = Userleads(name=name, phone=phone,  email=email,
-#                               ask=ask, state=state, notes=notes,
-#                               url=url)
-#             lead.save()
-#     return JsonResponse({'message': 'lead save successfully'}, status=200)
 @api_view(['POST'])
 def csvUploder(request):
     
-    # print("🚀 ~ file: views.py ~ line 429 ~ token", request.headers.get('Authorization')[:8])
-    # token = AuthToken.objects.get(token_key=request.headers.get('Authorization')[:8])
     user = User.objects.get(id="1")
     csv_file = request.data['csvFile']
-    # csvphonenum = request.data['csvphonenum']
-    # data = json.loads(csvphonenum)
-    # print("______________csvphonenum_____________----------",type(data))
     reader = pd.read_csv(csv_file)
-    # dic=reader.to_dict('list')
-    # all_leads=Userleads.objects.filter(user=user).values()
-    # list_dic=[]
-    # print("reader",reader)
-    # for i in all_leads:
-    #     list_dic.append(json.loads(i["csv_data"]))
-    # print("list_dic",type(list_dic))
-    # old_data=pd.DataFrame(list_dic)
-    # old_dic={}
-    # for i in list_dic:
-    #     for k,v in i.items():
-    #         print(v,type(v))
-    #         old_dic[k]=v
-    # print("old_dic",old_dic)
-    # old_data=pd.DataFrame(old_dic)
-    # print("old_data",old_data)
-    # dic=pd.concat([reader,old_data],ignore_index=True).drop_duplicates(keep=False)
     dumped_data=json.dumps(reader.to_dict('records'))
     print("dumped_data",dumped_data)
     # csv_head = list(reader.head())
@@ -655,23 +651,7 @@ def csvUploder(request):
     #         continue
     return JsonResponse({'message': 'lead save successfully'}, status=200)
 
-# @csrf_exempt
-# def handle_incoming_call(request):
-#     # response = VoiceResponse()
-#     # dial = Dial(ring_tone='https://www.kozco.com/tech/piano2-CoolEdit.mp3',recording_status_callback='https://830ecbd6a5d9.ngrok.io/voip/api_voip/recording_status_callback',timeout=10)
-#     # dial.number('+919904924290')
-#     # response.append(dial)
-#     # response.say("Hi, I can't come to the phone right now, please leave a message after the beep")
-#     # response.redirect("https://830ecbd6a5d9.ngrok.io/voip/api_voip/handleDialCallStatus")
-#     response = VoiceResponse()
-#     # dial = Dial()
-#     # dial.client(
-#     #     status_callback='https://830ecbd6a5d9.ngrok.io/voip/api_voip/recording_status_callback',
-#     #     status_callback_method="POST",
-#     #     status_callback_event='completed')
-#     response.dial('+18434259777')
-#     # response.redirect('https://830ecbd6a5d9.ngrok.io/voip/api_voip/recording_status_callback', method='POST')
-#     return HttpResponse(response)
+
 @csrf_exempt
 def handle_incoming_call(request):
     response = VoiceResponse()
@@ -683,7 +663,7 @@ def handle_incoming_call(request):
     response.append(dial)
     response.say("Hi, I can't come to the phone right now, please leave a message after the beep",voice="alice")
     response.record(
-        recording_status_callback='https://py-api.dreampotential.org/voip/api_voip/recording_status_callback',
+        recording_status_callback=SERVER_URL + '/voip/api_voip/recording_status_callback',
         recording_status_callback_event='completed')
     response.hangup()
     return HttpResponse(response)
@@ -702,18 +682,6 @@ def retrieving_call_logs(request):
         # print(record.sid)
     print("🚀 ~ file: views.py ~ line 491 ~ datalist", type(datalist))
     return JsonResponse(datalist,safe=False)
-
-# @csrf_exempt
-# def handleDialCallStatus(request):
-#     response = VoiceResponse()
-#     response.play('https://www.kozco.com/tech/piano2-CoolEdit.mp3', loop=2)
-#     response.say("Hi, I can't come to the phone right now, please leave a message after the beep")
-#     response.pause(length=3)
-#     response.record(
-#         recording_status_callback='https://830ecbd6a5d9.ngrok.io/voip/api_voip/recording_status_callback',
-#         recording_status_callback_event='completed')
-#     response.hangup()
-#     return HttpResponse(str(response))
 
 
 @csrf_exempt
@@ -746,25 +714,6 @@ def voicemail_view(request):
     return JsonResponse(all_recordings, safe=False)
 
 
-# def get_recordings(request):
-#     account_sid = settings.TWILIO['TWILIO_ACCOUNT_SID']
-#     auth_token = settings.TWILIO['TWILIO_AUTH_TOKEN']
-#     client = Client(account_sid, auth_token)
-#     recordings = client.recordings.list()
-#     all_recordings = []
-#     for record in recordings:
-#         if record.encryption_details is not None:
-#             rec = {
-#                 'date_created': record.date_created,
-#                 'sid': record.sid,
-#                 'duration': record.duration,
-#                 'status': record.status,
-#                 'price': record.price,
-#                 'path': "https://b8a302883e82.ngrok.io/voip/api_voip/recording/{}".format(record.sid)
-#             }
-#             all_recordings.append(rec)
-#     return all_recordings
-
 @csrf_exempt
 def recording_by_sid(request, sid):
     if request.method == 'GET':
@@ -781,35 +730,6 @@ def recording_by_sid(request, sid):
         print('delete file')
         del sid
         return redirect('/')
-
-# def delete_recording(request,sid):
-#     account_sid = settings.TWILIO['TWILIO_ACCOUNT_SID'],
-#     auth_token = settings.TWILIO['TWILIO_AUTH_TOKEN']
-#     client = Client(account_sid, auth_token)
-#     client.recordings(sid).delete()
-
-#     files = glob.glob('static/recordings/*.wav')
-#     for f in files:
-#         try:
-#             if sid in f:
-#                 os.remove(f)
-#                 print(f, ' file deleted')
-#         except OSError as e:
-#             print("Error: %s : %s" % (f, e.strerror))
-
-
-# def status_callback(request):
-#     response = VoiceResponse()
-#     dial = Dial()
-#     dial.number(
-#         '+12349013030',
-#         status_callback_event='initiated ringing answered completed',
-#         status_callback='https://myapp.com/calls/events',
-#         status_callback_method='POST'
-#     )
-#     response.append(dial)
-
-#     return response
 
 def record(request):
     response = VoiceResponse()
@@ -829,28 +749,10 @@ def voicemail(request):
         max_length=20,
         finish_on_key='*'
     )
-    # for post req
-    # response.record(transcribe=True,
-    #                 transcribe_callback='/handle_transcribe.php')
 
     response.say('I did not receive a recording')
 
     return response
-
-# def recording_status_callback(request):
-#     account_sid = settings.TWILIO['TWILIO_ACCOUNT_SID'],
-#     auth_token = settings.TWILIO['TWILIO_AUTH_TOKEN']
-#     client = Client(account_sid, auth_token)
-
-#     recording = client.calls('CAXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX') \
-#         .recordings \
-#         .create(
-#             recording_status_callback='https://myapp.com/recording-events',
-#             recording_status_callback_event=['in-progress completed'],
-#             recording_channels='dual'
-#         )
-
-#     return recording
 
 
 def outbound(request):
@@ -866,17 +768,3 @@ def outbound(request):
     '''
     response.number("+16518675309")
     return response
-
-# def click_to_call(request):
-#     client = get_client()
-#     call = client.calls.create(
-#         record=True,
-#         from_=from_num,
-#         to=to_num,
-#         url='http://demo.twilio.com/docs/voice.xml',
-#     )
-#     sms = client.messages.create(
-#             body=text,
-#             from_=from_num,
-#             to=to_num,
-#         )

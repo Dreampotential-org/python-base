@@ -3,6 +3,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('api_voip/add_number_to_conf/<str:session_id>/<str:destination_number>',
+         views.add_number_to_conf),
     path('api_voip/sms', views.twilio_inbound_sms),
     path('api_voip/send_file', views.send_sms_file_api),
     path('api_voip/send_sms', views.send_sms_api),
