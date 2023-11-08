@@ -1,13 +1,15 @@
+import os
 from webdriver_manager.firefox import GeckoDriverManager
 import platform
-from selenium.webdriver.firefox.options import Options
-from selenium.webdriver.common import desired_capabilities
+from utils.chirp import CHIRP
 import socket
 from selenium import webdriver
 import time
 
 import requests
 import logging
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.common import desired_capabilities
 logger = logging.getLogger(__name__)
 
 
@@ -65,7 +67,6 @@ def alive(url):
             print("Waiting on: %s" % url)
         time.sleep(2)
 
-
 def get_driver_firefox(platform=None, proxy=None):
     # fp = webdriver.FirefoxProfile()
     # fp.add_extension('./firefox-plugin/anticaptcha-plugin_v0.3101.xpi')
@@ -74,53 +75,91 @@ def get_driver_firefox(platform=None, proxy=None):
     # caps['marionette'] = False
     caps.update(options.to_capabilities())
 
+    cwd = os.getcwd()
+    CHIRP.info(cwd)
+
+    os.environ["MOZ_WINDOW_OCCLUSION"] = "0"
+
     # XXX make configurable with env var for dev setup and prod deploy
-    if True or socket.gethostname() in [
-        'arosen-laptop', 'merih.local', 'hassans-MacBook-Pro-2.local',
-        'arosen-ZenBook-UX434IQ-Q407IQ', 'zano-Vostro-3558',
-        'zano-ASUS-TUF-Gaming-A15-FA506II-FA506II'
-    ]:
-        command_executor = 'http://127.0.0.1:4444/wd/hub'
-        alive_url = 'http://127.0.0.1:4444'
-        fp = webdriver.FirefoxProfile('./codes/jmi439mu.captcha-firefox')
-        options.binary = '/opt/firefox/firefox'
+    if (
+        socket.gethostname()
+        in [
+            "node.arosen-161263.rethinkdb-pg0.clemson.cloudlab.us",
+            "jj-HP-Laptop-15-dy2xxx",
+            "arosen-laptop",
+            "merih.local",
+            "hassans-MacBook-Pro-2.local",
+            "arosen-ZenBook-UX434IQ-Q407IQ",
+            "zano-Vostro-3558",
+            "syed-ASUS-TUF-Gaming-A15-FA506II-FA506II",
+            "ar-HP-Laptop-15-dy2xxx",
+            "127.0.0.1",
+        ]
+        or "rethinkdb" in socket.gethostname()
+    ):
+        fp = webdriver.FirefoxProfile()
+
+        fp.set_preference(
+            "general.useragent.override",
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36')
+        if proxy:
+            ip, port = proxy.split(":")
+            fp.set_preference("network.proxy.type", 1)
+            fp.set_preference("network.proxy.socks", ip)
+            fp.set_preference("network.proxy.socks_port", int(port))
+        fp.set_preference("dom.timeout.enable_budget_timer_throttling", False)
+        fp.set_preference("widget.windows.window_occlusion_tracking.enabled", False)
+        fp.set_preference(
+            "dom.min_background_timeout_value_without_budget_throttling", 10
+        )
+        options.binary_location = (
+            "%s/mozilla-unified/obj-x86_64-pc-linux-gnu/dist/bin/firefox"
+            % os.path.expanduser("~")
+        )
+
+        if "rethinkdb" in socket.gethostname():
+            options.binary_location = (
+                "/data/mozilla-unified/obj-x86_64-pc-linux-gnu/dist/bin/firefox"
+            )
+            options.add_argument("--headless")
+
+        driver = webdriver.Firefox(options=options, firefox_profile=fp)
+        return driver
+
     else:
-        command_executor = 'http://selenium-hub:4444/wd/hub'
-        alive_url = 'http://selenium-hub:4444'
-        fp = webdriver.FirefoxProfile(
-            '/home/web/codes/jmi439mu.captcha-firefox')
+        options.binary_location = (
+            "/data/mozilla-unified/obj-x86_64-pc-linux-gnu/dist/bin/firefox"
+        )
+        command_executor = "http://selenium-hub:4444/wd/hub"
+        alive_url = "http://selenium-hub:4444"
+        fp = webdriver.FirefoxProfile()
+        # alive(alive_url)
 
     # fp.set_preference('permissions.default.image', 2)
-    fp.set_preference(
-        "general.useragent.override",
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 14_4_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1")
+    fp.set_preference("dom.timeout.enable_budget_timer_throttling", False)
+    fp.set_preference("widget.windows.window_occlusion_tracking.enabled", False)
+    fp.set_preference("dom.min_background_timeout_value_without_budget_throttling", 10)
 
-    alive(alive_url)
     if proxy:
         print("configuring to use proxy=%s" % proxy)
+        ip, port = proxy.split(":")
         fp.set_preference("network.proxy.type", 1)
-        fp.set_preference("network.proxy.socks", '')
-        fp.set_preference("network.proxy.socks_port", "")
-        fp.set_preference(
-            "network.proxy.http", proxy.split(":")[0])
-        fp.set_preference("network.proxy.http_port",
-                          int(proxy.split(":")[1]))
+        fp.set_preference("network.proxy.socks", ip)
+        fp.set_preference("network.proxy.socks_port", int(port))
 
-        fp.set_preference(
-            "network.proxy.ssl", proxy.split(":")[0])
-        fp.set_preference(
-            "network.proxy.ssl_port", int(proxy.split(":")[1]))
+    options.add_argument("--headless")
+    driver = webdriver.Firefox(options=options, firefox_profile=fp)
 
+    return driver
     driver = webdriver.Remote(
         browser_profile=fp,
         command_executor=command_executor,
         desired_capabilities=caps,
     )
     logger.error("got driver")
-    driver.set_page_load_timeout(30)
-    logger.info("set page load timeout")
+    # driver.set_page_load_timeout(30)
+    # logger.info("set page load timeout")
     return driver
-
 
 def init_driver(browser, proxy=None):
     os_platform = platform.system()
