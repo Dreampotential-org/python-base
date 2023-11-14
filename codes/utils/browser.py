@@ -71,6 +71,7 @@ def get_driver_firefox(platform=None, proxy=None):
     # fp = webdriver.FirefoxProfile()
     # fp.add_extension('./firefox-plugin/anticaptcha-plugin_v0.3101.xpi')
     options = Options()
+
     caps = desired_capabilities.DesiredCapabilities.FIREFOX.copy()
     # caps['marionette'] = False
     caps.update(options.to_capabilities())
@@ -80,7 +81,6 @@ def get_driver_firefox(platform=None, proxy=None):
 
     os.environ["MOZ_WINDOW_OCCLUSION"] = "0"
 
-    # XXX make configurable with env var for dev setup and prod deploy
     if (
         socket.gethostname()
         in [
@@ -97,11 +97,13 @@ def get_driver_firefox(platform=None, proxy=None):
         ]
         or "rethinkdb" in socket.gethostname()
     ):
-        fp = webdriver.FirefoxProfile()
+        fp = webdriver.FirefoxProfile(
+            # '/home/arosen/.mozilla/firefox/'
+        )
 
         fp.set_preference(
             "general.useragent.override",
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36')
+            "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0")
         if proxy:
             ip, port = proxy.split(":")
             fp.set_preference("network.proxy.type", 1)
